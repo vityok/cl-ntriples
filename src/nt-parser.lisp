@@ -69,7 +69,6 @@
 (define-constant +NT-LF+ #xA)
 (define-constant +NT-SPACE+ #x20)
 (define-constant +NT-TAB+ #x9)
-(define-constant +NT-WS+ `(,+NT-SPACE+ ,+NT-TAB+))
 
 ;;---------------------------------------------------------
 
