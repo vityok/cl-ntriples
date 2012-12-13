@@ -1,3 +1,28 @@
+;; Copyright (c) 2012, Victor Anyakin <anyakinvictor@yahoo.com>
+;; All rights reserved.
+
+;; Redistribution and use in source and binary forms, with or without
+;; modification, are permitted provided that the following conditions are met:
+;;     * Redistributions of source code must retain the above copyright
+;;       notice, this list of conditions and the following disclaimer.
+;;     * Redistributions in binary form must reproduce the above copyright
+;;       notice, this list of conditions and the following disclaimer in the
+;;       documentation and/or other materials provided with the distribution.
+;;     * Neither the name of the organization nor the
+;;       names of its contributors may be used to endorse or promote products
+;;       derived from this software without specific prior written permission.
+
+;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+;; ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+;; WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+;; DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+;; DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+;; (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+;; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+;; ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+;; SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 ;;; N-Triples parser
 
 ;;; Useful resources:
@@ -6,8 +31,8 @@
 ;; http://www.w3.org/TR/rdf-testcases/#ntriples
 ;; http://www.w3.org/DesignIssues/Notation3
 
-
-;;; N-Triples format definition in EBNF
+;;; N-Triples format definition in EBNF as at the moment when this
+;;; code was written
 
 ;; ntripleDoc	::=	line*
 ;; line		::=	ws* ( comment | triple )? eoln
@@ -36,15 +61,7 @@
 
 ;;; Main function is PARSE-NT
 
-(ql:quickload "alexandria")
-
-(defpackage :nt-parser
-  (:nicknames :nt)
-  (:use :cl :alexandria)
-  (:export
-   #:parse-nt))
-
-(in-package :nt-parser)
+(in-package :cl-ntriples)
 
 ;;---------------------------------------------------------
 
@@ -68,7 +85,7 @@
 
 (defun consume-whitespace (stream)
   (loop
-     :for c = (peek-char t stream nil) :then (peek-char t stream nil)
+     :for c = (peek-char t stream nil)
      :while c
      :while (ntriple-ws-p c)
      :do (read-char stream)))
@@ -79,7 +96,7 @@
   ;; uriref ::= '<' absoluteURI '>'
   (read-char stream)			; skip the <
   (with-output-to-string (str)
-    (loop :for c = (read-char stream) :then (read-char stream)
+    (loop :for c = (read-char stream)
        :until (char= c #\>)
        :do (princ c str))))
 
@@ -110,9 +127,22 @@
 		:when (char= c #\\)
 		:do (switch ((read-char stream) :test #'char=)
 		      (#\\ (princ #\\ str))
-		      (#\n (princ #\Newline str))
-		      (#\N (princ #\Newline str))
-		      (#\" (princ #\" str)))
+		      (#\n (princ (code-char #xA) str))
+		      (#\r (princ (code-char #xD) str))
+		      (#\t (princ (code-char #x9) str))
+		      (#\" (princ #\" str))
+		      (#\u
+		       ;; \uHHHH 4 required hexadecimal digits HHHH
+		       ;; encoding Unicode character u
+		       (princ (code-char
+			       (parse-integer
+				(concatenate 'string
+					     (list (read-char stream)
+						   (read-char stream)
+						   (read-char stream)
+						   (read-char stream)))
+				:radix 16))
+			      str)))
 		:until (char= c #\")
 		:do (princ c str))))
 	  (lang-string ""))
@@ -128,15 +158,17 @@
 			       (char= c #\-))
 		    :do (princ (read-char stream) str))))
 	
-	 (list :literal-string literal-string
-	       :lang lang-string))
+	 `((:literal-string . ,literal-string)
+	   (:lang . ,lang-string)))
+
 	(#\^
 	 (read-char stream)		; skip the hats
 	 (read-char stream)
-	 (list :literal-string literal-string
-	       :uriref (parse-uriref stream)))
+	 `((:literal-string . ,literal-string)
+	   (:uriref . ,(parse-uriref stream))))
+
 	(t			       ; simple literal: just a string
-	 (list :literal-string literal-string))))))
+	 `((:literal-string . ,literal-string)))))))
 
 ;;---------------------------------------------------------
 
@@ -200,7 +232,7 @@ triple ::= subject ws+ predicate ws+ object ws* '.' ws*
 (defun parse-ntriple-line (stream)
   ;; consume white space if there is any at the start of a line
   (loop
-     :for c = (peek-char t stream nil) :then (peek-char t stream nil)
+     :for c = (peek-char t stream nil)
      :unless c
      :do (return-from parse-ntriple-line nil)
      :while (ntriple-ws-p c)
@@ -208,7 +240,7 @@ triple ::= subject ws+ predicate ws+ object ws* '.' ws*
   ;; check if this line is a comment or a triple
   (if (char= #\# (peek-char t stream))
       (progn				; consume comment line
-	(loop :for c = (read-char stream nil) :then (read-char stream nil)
+	(loop :for c = (read-char stream nil)
 	   :unless c
 	   :do (return-from parse-ntriple-line 'comment)
 	   :until (ntriple-crlf-p c))
@@ -223,7 +255,7 @@ triple ::= subject ws+ predicate ws+ object ws* '.' ws*
 
 (defun parse-ntriple-doc (stream)
   (loop
-     :for line = (parse-ntriple-line stream) :then (parse-ntriple-line stream)
+     :for line = (parse-ntriple-line stream)
      :while line
      :unless (eq line 'comment)
      :collect line))
@@ -232,7 +264,13 @@ triple ::= subject ws+ predicate ws+ object ws* '.' ws*
 
 (defgeneric parse-nt (src)
   (:documentation "Parses N-Triples from the given source. This method
-accepts a file pathname, a stream, or a string.")
+accepts a file pathname, a stream, or a string.
+
+Returns a list of triples consisting of three elements: subject,
+predicate, object. Subjects can be either an `uriref' or a
+`nodeID'. Objects can be of three types: `uriref', `nodeID' or a
+`literal'. Depending on the type of the object it is encoded into a
+list.")
   (:method ((src pathname))
     (with-open-file (stream src :direction :input)
       (parse-ntriple-doc stream)))
