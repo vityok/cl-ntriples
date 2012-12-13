@@ -1,0 +1,23 @@
+**CL-NTRIPLES** provides a simple parser for the N-Triples data format
+as defined by the W3C for storing RDF/Semantic information. N-Triples
+is a line-based, plain text format for encoding an RDF graph.
+
+Main entry function is `PARSE-NT` method that parses N-Triples from
+the given source. This method accepts a file pathname, an input
+stream, or a string.
+
+Returns a list of triples consisting of three elements: subject,
+predicate, object. Subjects can be either an `uriref` or a
+`nodeID`. Objects can be of three types: `uriref`, `nodeID` or a
+`literal`. Depending on the type of the object it is encoded into an
+association list.
+
+N-Triples data format standard definition is provided in the W3C documents:
+
+* [RDF Testcases, N-Triples](http://www.w3.org/TR/rdf-testcases/#ntriples)
+
+Check also the [Semantic Web page](http://www.cliki.net/Semantic%20Web) on CLiki.
+
+Project home page is:
+
+* http://sourceforge.net/projects/cl-ntriples/
