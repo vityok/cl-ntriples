@@ -123,7 +123,8 @@
     (let ((literal-string		; remember the string
 	   (with-output-to-string (str)
 	     (loop :for c = (read-char stream)
-		:when (char= c #\\)
+		:until (char= c #\")
+		:if (char= c #\\)
 		:do (switch ((read-char stream) :test #'char=)
 		      (#\\ (princ #\\ str))
 		      (#\n (princ (code-char #xA) str))
@@ -142,7 +143,7 @@
 						   (read-char stream)))
 				:radix 16))
 			      str)))
-		:until (char= c #\")
+		:else
 		:do (princ c str))))
 	  (lang-string ""))
 
@@ -156,18 +157,16 @@
 		    :while (or (alphanumericp c)
 			       (char= c #\-))
 		    :do (princ (read-char stream) str))))
-	
-	 `((:literal-string . ,literal-string)
-	   (:lang . ,lang-string)))
+
+	 `(:literal-string ,literal-string :lang ,lang-string))
 
 	(#\^
 	 (read-char stream)		; skip the hats
 	 (read-char stream)
-	 `((:literal-string . ,literal-string)
-	   (:uriref . ,(parse-uriref stream))))
+	 `(:literal-string ,literal-string :uriref ,(parse-uriref stream)))
 
 	(t			       ; simple literal: just a string
-	 `((:literal-string . ,literal-string)))))))
+	 `(:literal-string ,literal-string))))))
 
 ;;---------------------------------------------------------
 
@@ -207,7 +206,7 @@ triple ::= subject ws+ predicate ws+ object ws* '.' ws*
 	      (parse-uriref stream))
 	     (#\_
 	      (parse-node-id stream))
-	     (#\" 
+	     (#\"
 	      (parse-literal stream))
 	     (t
 	      (format t "wrong character `~a' in nt-parse-subject~%" (peek-char t stream)))))
@@ -280,5 +279,23 @@ list.")
 
   (:method ((src stream))
     (parse-ntriple-doc src)))
+
+;;---------------------------------------------------------
+;; Parser code end. Utility functions
+;;---------------------------------------------------------
+
+(defun predicate? (triples predicate &key lang data-type)
+  "Given the list of triples produced by PARSE-NT returns a list of
+triples with predicates matching the given one."
+
+  (loop :for triple :in triples
+     :when (and (string= predicate (second triple))
+		(if lang (string= (getf (third triple) :lang)
+				  lang)
+		    T)
+		(if data-type (string= (getf (third triple) :uriref)
+				       data-type)
+		    T))
+     :collect triple))
 
 ;; EOF
