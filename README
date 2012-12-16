@@ -1,16 +1,10 @@
-**CL-NTRIPLES** provides a simple parser for the N-Triples data format
-as defined by the W3C for storing RDF/Semantic information. N-Triples
-is a line-based, plain text format for encoding an RDF graph.
+-*- longlines -*-
 
-Main entry function is `PARSE-NT` method that parses N-Triples from
-the given source. This method accepts a file pathname, an input
-stream, or a string.
+**CL-NTRIPLES** provides a simple parser for the N-Triples data format as defined by the W3C for storing RDF/Semantic information. N-Triples is a line-based, plain text format for encoding an RDF graph.
 
-Returns a list of triples consisting of three elements: subject,
-predicate, object. Subjects can be either an `uriref` or a
-`nodeID`. Objects can be of three types: `uriref`, `nodeID` or a
-`literal`. Depending on the type of the object it is encoded into an
-association list.
+Main entry function is `PARSE-NT` method that parses N-Triples from the given source. This method accepts a file pathname, an input stream, or a string.
+
+Returns a list of triples consisting of three elements: subject, predicate, object. Subjects can be either an `uriref` or a `nodeID`. Objects can be of three types: `uriref`, `nodeID` or a `literal`. Depending on the type of the object it is encoded into an association list.
 
 N-Triples data format standard definition is provided in the W3C documents:
 
@@ -18,6 +12,52 @@ N-Triples data format standard definition is provided in the W3C documents:
 
 Check also the [Semantic Web page](http://www.cliki.net/Semantic%20Web) on CLiki.
 
-Project home page is:
+[Project page on Sourceforge.](http://sourceforge.net/projects/cl-ntriples/)
 
-* http://sourceforge.net/projects/cl-ntriples/
+
+Sample usage
+============
+
+CL-NTRIPLES was developed for a practical purpose of accessing the wealth of data accumulated by the DBPedia project. For example, let's query information about a Ukrainian city of Chernihiv (wiki, dbpedia):
+
+~~~~
+(defvar page-url "http://dbpedia.org/data/Chernihiv.ntriples")
+(defvar *res* (nt:parse-nt (drakma:http-request page-url)))
+;; *res* now contains a list of triples, let's query some predicates
+;; for brevity, predicates will defined as variables
+
+(defconstant +prop-area-total-km+ "http://dbpedia.org/property/areaTotalKm")
+(defconstant +rdf-label+ "http://www.w3.org/2000/01/rdf-schema#label")
+
+;; querying predicates is now reduced to a simple function call:
+;; nt:predicate? TRIPLES PREDICATE &key LANG DATA-TYPE
+
+;; what is the city area in km2?
+(nt:predicate? *res* +prop-area-total-km+)
+=> (("http://dbpedia.org/resource/Chernihiv"
+  "http://dbpedia.org/property/areaTotalKm"
+  ((:LITERAL-STRING . "79")
+   (:URIREF . "http://www.w3.org/2001/XMLSchema#int"))))
+
+;; how do Japanese call this city?
+(predicate? *res* +rdf-label+ :lang "ja")
+=> (("http://dbpedia.org/resource/Chernihiv"
+  "http://www.w3.org/2000/01/rdf-schema#label"
+  (:LITERAL-STRING "チェルニーヒウ" :LANG "ja")))
+~~~~
+
+
+Functions
+=========
+
+Package provides following functions:
+
+* `PARSE-NT src` 
+Parses and returns a list of triples
+
+* `PREDICATE? triples predicate &key lang data-type`
+filters out triples with matching predicates. Additional parameters (lang and data-type) can be used to limit returned triples to those with matching language and data type specifiers.
+
+* `LITERAL-STRING triple`
+returns the literal-string value of the given triple.
+

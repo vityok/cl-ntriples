@@ -15,7 +15,7 @@
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ;; ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 ;; WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-;; DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+;; DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDER BE LIABLE FOR ANY
 ;; DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 ;; (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
 ;; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -203,9 +203,9 @@ triple ::= subject ws+ predicate ws+ object ws* '.' ws*
 	   (consume-whitespace stream)
 	   (switch ((peek-char t stream) :test #'char=)
 	     (#\<
-	      (parse-uriref stream))
+	      `(:object-uriref ,(parse-uriref stream)))
 	     (#\_
-	      (parse-node-id stream))
+	      `(:object-node-id ,(parse-node-id stream)))
 	     (#\"
 	      (parse-literal stream))
 	     (t
@@ -297,5 +297,13 @@ triples with predicates matching the given one."
 				       data-type)
 		    T))
      :collect triple))
+
+;;---------------------------------------------------------
+
+(defun literal-string (triple)
+  "Returns the literal-string value of the triple's object."
+  (if (= (length triple) 1)
+      (literal-string (first triple))
+      (getf (third triple) :literal-string)))
 
 ;; EOF
