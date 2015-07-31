@@ -18,6 +18,12 @@ Check also the [Semantic Web page](http://www.cliki.net/Semantic%20Web) on CLiki
 Sample usage
 ============
 
+CL-NTRIPLES [![Quickdocs](http://quickdocs.org/badge/cl-ntriples.svg)](http://quickdocs.org/cl-ntriples/) is available through Quicklisp:
+
+```
+(ql:quickload :cl-ntriples)
+```
+
 CL-NTRIPLES was developed for a practical purpose of accessing the wealth of data accumulated by the DBPedia project. For example, let's query information about a Ukrainian city of Chernihiv (wiki, dbpedia):
 
 ~~~~
