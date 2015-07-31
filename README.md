@@ -1,5 +1,3 @@
--*- longlines -*-
-
 **CL-NTRIPLES** provides a simple parser for the N-Triples data format as defined by the W3C for storing RDF/Semantic information. N-Triples is a line-based, plain text format for encoding an RDF graph.
 
 Main entry function is `PARSE-NT` method that parses N-Triples from the given source. This method accepts a file pathname, an input stream, or a string.
